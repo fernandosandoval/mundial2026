@@ -1,0 +1,35 @@
+{
+  "name": "mundial2026-argentina-monitor",
+  "version": "1.0.0",
+  "description": "Monitor automatizado de partidos de Argentina en el Mundial 2026",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "cuantoFalta": "tsx src/cli.ts",
+    "test": "playwright test"
+  },
+  "keywords": [
+    "mundial",
+    "argentina",
+    "football-data",
+    "resend"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "resend": "^4.0.0",
+    "dotenv": "^16.4.7",
+    "node-schedule": "^2.1.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.0",
+    "@types/node": "^22.13.10",
+    "@types/node-schedule": "^2.1.7",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
