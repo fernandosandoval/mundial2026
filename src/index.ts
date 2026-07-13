@@ -4,6 +4,15 @@ import { config } from './config';
 import { ResendEmailService } from './emailService';
 import { MatchScheduler } from './scheduler';
 import { NodeScheduleAdapter } from './schedulerAdapter';
+import type { EmailService } from './types';
+
+async function sendStartupTestEmail(emailService: EmailService): Promise<void> {
+  await emailService.send(
+    'Prueba de monitor - Mundial 2026',
+    'El monitor de partidos está activo y los correos funcionan',
+  );
+  console.log('[monitor] Email de prueba enviado correctamente.');
+}
 
 async function startHealthServer(port: number): Promise<void> {
   const server = createServer((_req, res) => {
@@ -33,6 +42,8 @@ async function main(): Promise<void> {
     fromEmail: config.resendFromEmail,
     toEmail: config.notificationEmail,
   });
+
+  await sendStartupTestEmail(emailService);
 
   const monitor = new MatchScheduler({
     apiClient,
