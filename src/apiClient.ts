@@ -12,7 +12,6 @@ const UPCOMING_STATUSES = new Set(['SCHEDULED', 'TIMED']);
 
 export interface FootballDataClientOptions {
   apiKey: string;
-  argentinaTeamId: number;
   worldCupCompetitionCode: string;
   fetchFn?: typeof fetch;
 }
@@ -21,76 +20,59 @@ export function getTeamDisplayName(team: Team): string {
   return team.name ?? team.shortName ?? team.tla ?? 'Por definir';
 }
 
-export function isArgentinaTeam(team: Team | null | undefined, argentinaTeamId: number): boolean {
-  if (!team) {
-    return false;
-  }
+export function filterUpcomingMatches(
+  matches: FootballMatch[],
+  now: Date = new Date(),
+): FootballMatch[] {
+  const nowMs = now.getTime();
 
-  if (team.id === argentinaTeamId) {
-    return true;
-  }
-
-  const teamLabels = [team.name, team.shortName, team.tla].filter(
-    (label): label is string => typeof label === 'string' && label.length > 0,
-  );
-
-  return teamLabels.some((label) => label.includes('Argentina'));
+  return matches
+    .filter((match) => UPCOMING_STATUSES.has(match.status))
+    .filter((match) => new Date(match.utcDate).getTime() > nowMs)
+    .sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
 }
 
-export function matchInvolvesArgentina(
-  match: FootballMatch,
-  argentinaTeamId: number,
-): boolean {
-  return (
-    isArgentinaTeam(match.homeTeam, argentinaTeamId) ||
-    isArgentinaTeam(match.awayTeam, argentinaTeamId)
-  );
+export function describeMatchWinner(match: FootballMatch): string {
+  const homeName = getTeamDisplayName(match.homeTeam);
+  const awayName = getTeamDisplayName(match.awayTeam);
+  const score = match.score?.fullTime;
+  const homeGoals = score?.homeTeam ?? 0;
+  const awayGoals = score?.awayTeam ?? 0;
+  const scoreLine = `${homeName} ${homeGoals} - ${awayGoals} ${awayName}`;
+
+  const winner = match.score?.winner;
+  if (winner === 'HOME_TEAM') {
+    return `Resultado: ${scoreLine}. Ganó ${homeName}.`;
+  }
+  if (winner === 'AWAY_TEAM') {
+    return `Resultado: ${scoreLine}. Ganó ${awayName}.`;
+  }
+  if (winner === 'DRAW') {
+    return `Resultado: ${scoreLine}. Empate.`;
+  }
+
+  return `Resultado: ${scoreLine}.`;
 }
 
 export class FootballDataClient implements FootballDataApi {
   private readonly apiKey: string;
-  private readonly argentinaTeamId: number;
   private readonly worldCupCompetitionCode: string;
   private readonly fetchFn: typeof fetch;
 
   constructor(options: FootballDataClientOptions) {
     this.apiKey = options.apiKey;
-    this.argentinaTeamId = options.argentinaTeamId;
     this.worldCupCompetitionCode = options.worldCupCompetitionCode;
     this.fetchFn = options.fetchFn ?? fetch;
   }
 
-  async getNextArgentinaMatch(): Promise<MatchInfo | null> {
-    const url = `${FOOTBALL_DATA_BASE_URL}/competitions/${this.worldCupCompetitionCode}/matches`;
+  async getUpcomingMatches(): Promise<MatchInfo[]> {
+    const matches = await this.fetchCompetitionMatches();
+    return filterUpcomingMatches(matches).map((match) => this.toMatchInfo(match));
+  }
 
-    const response = await this.fetchFn(url, {
-      headers: {
-        'X-Auth-Token': this.apiKey,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Error al consultar Football-Data.org (${response.status}): ${await response.text()}`,
-      );
-    }
-
-    const data = (await response.json()) as TeamMatchesResponse;
-    const now = Date.now();
-    const matches = data.matches ?? [];
-
-    const upcomingMatches = matches
-      .filter((match) => matchInvolvesArgentina(match, this.argentinaTeamId))
-      .filter((match) => UPCOMING_STATUSES.has(match.status))
-      .filter((match) => new Date(match.utcDate).getTime() > now)
-      .sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
-
-    const nextMatch = upcomingMatches[0];
-    if (!nextMatch) {
-      return null;
-    }
-
-    return this.toMatchInfo(nextMatch);
+  async getNextMatch(): Promise<MatchInfo | null> {
+    const upcoming = await this.getUpcomingMatches();
+    return upcoming[0] ?? null;
   }
 
   async getMatchById(matchId: number): Promise<FootballMatch> {
@@ -111,33 +93,33 @@ export class FootballDataClient implements FootballDataApi {
   }
 
   toMatchInfo(match: FootballMatch): MatchInfo {
-    const isArgentinaHome = isArgentinaTeam(match.homeTeam, this.argentinaTeamId);
-    const rival = isArgentinaHome ? match.awayTeam : match.homeTeam;
-
     return {
       id: match.id,
       startTime: new Date(match.utcDate),
-      rivalName: getTeamDisplayName(rival),
-      rivalId: rival.id,
-      isArgentinaHome,
+      homeTeamName: getTeamDisplayName(match.homeTeam),
+      awayTeamName: getTeamDisplayName(match.awayTeam),
+      homeTeamId: match.homeTeam.id,
+      awayTeamId: match.awayTeam.id,
       status: match.status,
     };
   }
-}
 
-export function didArgentinaWin(match: FootballMatch, argentinaTeamId: number): boolean {
-  if (match.status !== 'FINISHED') {
-    return false;
+  private async fetchCompetitionMatches(): Promise<FootballMatch[]> {
+    const url = `${FOOTBALL_DATA_BASE_URL}/competitions/${this.worldCupCompetitionCode}/matches`;
+
+    const response = await this.fetchFn(url, {
+      headers: {
+        'X-Auth-Token': this.apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Error al consultar Football-Data.org (${response.status}): ${await response.text()}`,
+      );
+    }
+
+    const data = (await response.json()) as TeamMatchesResponse;
+    return data.matches ?? [];
   }
-
-  const winner = match.score?.winner;
-  if (!winner || winner === 'DRAW') {
-    return false;
-  }
-
-  if (winner === 'HOME_TEAM') {
-    return isArgentinaTeam(match.homeTeam, argentinaTeamId);
-  }
-
-  return isArgentinaTeam(match.awayTeam, argentinaTeamId);
 }

@@ -1,19 +1,18 @@
 import { test, expect } from '@playwright/test';
-import { didArgentinaWin } from '../src/apiClient';
+import { describeMatchWinner } from '../src/apiClient';
 import { MockEmailService } from '../src/emailService';
-import { EMAIL_SUBJECTS, MatchScheduler } from '../src/scheduler';
+import { MatchScheduler } from '../src/scheduler';
 import { InMemorySchedulerAdapter } from '../src/schedulerAdapter';
 import {
-  ARGENTINA_TEAM_ID,
   createFinishedMatch,
   createSampleMatchInfo,
   MockFootballDataApi,
 } from './helpers/mocks';
 
 test.describe('Email final según resultado del partido', () => {
-  test('envía email de victoria cuando Argentina gana como local', async () => {
+  test('envía email con resultado cuando gana el local', async () => {
     const match = createSampleMatchInfo();
-    const finishedMatch = createFinishedMatch('HOME_TEAM', { argentinaHome: true, homeGoals: 2, awayGoals: 1 });
+    const finishedMatch = createFinishedMatch('HOME_TEAM', { homeGoals: 2, awayGoals: 1 });
     const apiClient = new MockFootballDataApi(match, new Map([[match.id, finishedMatch]]));
     const emailService = new MockEmailService();
 
@@ -21,20 +20,25 @@ test.describe('Email final según resultado del partido', () => {
       apiClient,
       emailService,
       scheduler: new InMemorySchedulerAdapter(),
-      argentinaTeamId: ARGENTINA_TEAM_ID,
     });
 
-    await scheduler.checkMatchResultAndNotify(match.id);
+    await scheduler.checkMatchResultAndNotify(match);
 
     expect(emailService.sentEmails).toHaveLength(1);
-    expect(emailService.sentEmails[0].subject).toBe(EMAIL_SUBJECTS.victory);
-    expect(didArgentinaWin(finishedMatch, ARGENTINA_TEAM_ID)).toBe(true);
+    expect(emailService.sentEmails[0].subject).toBe('Terminó el partido: Argentina vs Francia');
+    expect(emailService.sentEmails[0].body).toContain('Argentina 2 - 1 Francia');
+    expect(emailService.sentEmails[0].body).toContain('Ganó Argentina');
+    expect(describeMatchWinner(finishedMatch)).toContain('Ganó Argentina');
   });
 
-  test('envía email de victoria cuando Argentina gana como visitante', async () => {
-    const match = createSampleMatchInfo({ isArgentinaHome: false, rivalName: 'Brasil' });
+  test('envía email con resultado cuando gana el visitante', async () => {
+    const match = createSampleMatchInfo({
+      homeTeamName: 'Brasil',
+      awayTeamName: 'Argentina',
+    });
     const finishedMatch = createFinishedMatch('AWAY_TEAM', {
-      argentinaHome: false,
+      homeTeamName: 'Brasil',
+      awayTeamName: 'Argentina',
       homeGoals: 0,
       awayGoals: 3,
     });
@@ -45,18 +49,18 @@ test.describe('Email final según resultado del partido', () => {
       apiClient,
       emailService,
       scheduler: new InMemorySchedulerAdapter(),
-      argentinaTeamId: ARGENTINA_TEAM_ID,
     });
 
-    await scheduler.checkMatchResultAndNotify(match.id);
+    await scheduler.checkMatchResultAndNotify(match);
 
     expect(emailService.sentEmails).toHaveLength(1);
-    expect(emailService.sentEmails[0].subject).toBe(EMAIL_SUBJECTS.victory);
+    expect(emailService.sentEmails[0].subject).toBe('Terminó el partido: Brasil vs Argentina');
+    expect(emailService.sentEmails[0].body).toContain('Ganó Argentina');
   });
 
-  test('no envía email cuando Argentina empata', async () => {
+  test('envía email con empate cuando el partido termina igualado', async () => {
     const match = createSampleMatchInfo();
-    const finishedMatch = createFinishedMatch('DRAW', { argentinaHome: true, homeGoals: 1, awayGoals: 1 });
+    const finishedMatch = createFinishedMatch('DRAW', { homeGoals: 1, awayGoals: 1 });
     const apiClient = new MockFootballDataApi(match, new Map([[match.id, finishedMatch]]));
     const emailService = new MockEmailService();
 
@@ -64,42 +68,17 @@ test.describe('Email final según resultado del partido', () => {
       apiClient,
       emailService,
       scheduler: new InMemorySchedulerAdapter(),
-      argentinaTeamId: ARGENTINA_TEAM_ID,
     });
 
-    await scheduler.checkMatchResultAndNotify(match.id);
+    await scheduler.checkMatchResultAndNotify(match);
 
-    expect(emailService.sentEmails).toHaveLength(0);
-    expect(didArgentinaWin(finishedMatch, ARGENTINA_TEAM_ID)).toBe(false);
-  });
-
-  test('no envía email cuando Argentina pierde', async () => {
-    const match = createSampleMatchInfo();
-    const finishedMatch = createFinishedMatch('AWAY_TEAM', {
-      argentinaHome: true,
-      homeGoals: 0,
-      awayGoals: 2,
-    });
-    const apiClient = new MockFootballDataApi(match, new Map([[match.id, finishedMatch]]));
-    const emailService = new MockEmailService();
-
-    const scheduler = new MatchScheduler({
-      apiClient,
-      emailService,
-      scheduler: new InMemorySchedulerAdapter(),
-      argentinaTeamId: ARGENTINA_TEAM_ID,
-    });
-
-    await scheduler.checkMatchResultAndNotify(match.id);
-
-    expect(emailService.sentEmails).toHaveLength(0);
-    expect(didArgentinaWin(finishedMatch, ARGENTINA_TEAM_ID)).toBe(false);
+    expect(emailService.sentEmails).toHaveLength(1);
+    expect(emailService.sentEmails[0].body).toContain('Empate');
   });
 
   test('no envía email si el partido aún no está FINISHED', async () => {
     const match = createSampleMatchInfo();
     const liveMatch = createFinishedMatch('HOME_TEAM', {
-      argentinaHome: true,
       status: 'IN_PLAY',
     });
     const apiClient = new MockFootballDataApi(match, new Map([[match.id, liveMatch]]));
@@ -109,10 +88,9 @@ test.describe('Email final según resultado del partido', () => {
       apiClient,
       emailService,
       scheduler: new InMemorySchedulerAdapter(),
-      argentinaTeamId: ARGENTINA_TEAM_ID,
     });
 
-    await scheduler.checkMatchResultAndNotify(match.id);
+    await scheduler.checkMatchResultAndNotify(match);
 
     expect(emailService.sentEmails).toHaveLength(0);
   });

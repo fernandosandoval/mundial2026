@@ -7,18 +7,19 @@ async function main(): Promise<void> {
 
   const apiClient = new FootballDataClient({
     apiKey: cliConfig.footballDataApiKey,
-    argentinaTeamId: cliConfig.argentinaTeamId,
     worldCupCompetitionCode: cliConfig.worldCupCompetitionCode,
   });
 
-  const nextMatch = await apiClient.getNextArgentinaMatch();
+  const nextMatch = await apiClient.getNextMatch();
 
   if (!nextMatch) {
-    console.log('No hay próximos partidos de Argentina programados en el Mundial.');
+    console.log('No hay próximos partidos programados en el Mundial.');
     process.exit(0);
   }
 
-  console.log(formatCuantoFalta(nextMatch.rivalName, nextMatch.startTime));
+  console.log(
+    formatCuantoFalta(nextMatch.homeTeamName, nextMatch.awayTeamName, nextMatch.startTime),
+  );
 }
 
 main().catch((error) => {

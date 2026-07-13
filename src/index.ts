@@ -4,20 +4,38 @@ import { config } from './config';
 import { ResendEmailService } from './emailService';
 import { MatchScheduler } from './scheduler';
 import { NodeScheduleAdapter } from './schedulerAdapter';
-import type { EmailService } from './types';
+import { formatStartupEmailBody } from './utils/time';
+import type { EmailService, FootballDataApi } from './types';
 
-async function sendStartupTestEmail(emailService: EmailService): Promise<void> {
-  await emailService.send(
-    'Prueba de monitor - Mundial 2026',
-    'El monitor de partidos está activo y los correos funcionan',
+async function sendStartupTestEmail(
+  emailService: EmailService,
+  apiClient: FootballDataApi,
+): Promise<void> {
+  const nextMatch = await apiClient.getNextMatch();
+
+  if (!nextMatch) {
+    await emailService.send(
+      'Prueba de monitor - Mundial 2026',
+      'El monitor está activo. No hay partidos próximos programados en el Mundial.',
+    );
+    console.log('[monitor] Email de prueba enviado (sin próximos partidos).');
+    return;
+  }
+
+  const body = formatStartupEmailBody(
+    nextMatch.homeTeamName,
+    nextMatch.awayTeamName,
+    nextMatch.startTime,
   );
+
+  await emailService.send('Prueba de monitor - Mundial 2026', body);
   console.log('[monitor] Email de prueba enviado correctamente.');
 }
 
 async function startHealthServer(port: number): Promise<void> {
   const server = createServer((_req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok', service: 'mundial2026-argentina-monitor' }));
+    res.end(JSON.stringify({ status: 'ok', service: 'mundial2026-monitor' }));
   });
 
   await new Promise<void>((resolve) => {
@@ -29,11 +47,10 @@ async function startHealthServer(port: number): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  console.log('[monitor] Iniciando monitor de partidos de Argentina - Mundial 2026');
+  console.log('[monitor] Iniciando monitor de partidos del Mundial 2026');
 
   const apiClient = new FootballDataClient({
     apiKey: config.footballDataApiKey,
-    argentinaTeamId: config.argentinaTeamId,
     worldCupCompetitionCode: config.worldCupCompetitionCode,
   });
 
@@ -43,13 +60,12 @@ async function main(): Promise<void> {
     toEmail: config.notificationEmail,
   });
 
-  await sendStartupTestEmail(emailService);
+  await sendStartupTestEmail(emailService, apiClient);
 
   const monitor = new MatchScheduler({
     apiClient,
     emailService,
     scheduler: new NodeScheduleAdapter(),
-    argentinaTeamId: config.argentinaTeamId,
     matchDurationMinutes: config.matchDurationMinutes,
     oneHourBeforeMinutes: config.oneHourBeforeMinutes,
   });

@@ -3,6 +3,7 @@ import {
   calculateTimeRemaining,
   computeNotificationTimes,
   formatCuantoFalta,
+  formatStartupEmailBody,
 } from '../src/utils/time';
 
 test.describe('Cálculo de tiempos y formato CLI', () => {
@@ -32,10 +33,21 @@ test.describe('Cálculo de tiempos y formato CLI', () => {
     const matchStart = new Date('2026-06-15T18:00:00.000Z');
     const now = new Date('2026-06-15T14:30:00.000Z');
 
-    const message = formatCuantoFalta('Francia', matchStart, now);
+    const message = formatCuantoFalta('Brasil', 'Francia', matchStart, now);
 
     expect(message).toBe(
-      'Faltan 3 horas y 30 minutos para que comience el partido entre Argentina y Francia',
+      'Faltan 3 horas y 30 minutos para que comience el partido entre Brasil y Francia',
+    );
+  });
+
+  test('formatea el cuerpo del email de arranque', () => {
+    const matchStart = new Date('2026-06-15T18:00:00.000Z');
+    const now = new Date('2026-06-15T14:30:00.000Z');
+
+    const message = formatStartupEmailBody('Brasil', 'Francia', matchStart, now);
+
+    expect(message).toBe(
+      'El monitor está activo. El próximo partido es Brasil vs Francia y comienza en 3 horas y 30 minutos.',
     );
   });
 

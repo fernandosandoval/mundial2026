@@ -28,11 +28,10 @@ export const config = {
 
 export function loadConfigForCli(): Pick<
   typeof config,
-  'footballDataApiKey' | 'argentinaTeamId' | 'worldCupCompetitionCode'
+  'footballDataApiKey' | 'worldCupCompetitionCode'
 > {
   return {
     footballDataApiKey: requireEnv('FOOTBALL_DATA_API_KEY'),
-    argentinaTeamId: Number(optionalEnv('ARGENTINA_TEAM_ID', '7627')),
     worldCupCompetitionCode: optionalEnv('WORLD_CUP_COMPETITION_CODE', 'WC'),
   };
 }

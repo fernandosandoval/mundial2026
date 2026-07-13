@@ -50,9 +50,10 @@ export interface TeamMatchesResponse {
 export interface MatchInfo {
   id: number;
   startTime: Date;
-  rivalName: string;
-  rivalId: number;
-  isArgentinaHome: boolean;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeTeamId: number;
+  awayTeamId: number;
   status: MatchStatus;
 }
 
@@ -73,7 +74,8 @@ export interface EmailService {
 }
 
 export interface FootballDataApi {
-  getNextArgentinaMatch(): Promise<MatchInfo | null>;
+  getUpcomingMatches(): Promise<MatchInfo[]>;
+  getNextMatch(): Promise<MatchInfo | null>;
   getMatchById(matchId: number): Promise<FootballMatch>;
 }
 
