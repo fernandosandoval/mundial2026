@@ -1,6 +1,7 @@
 import { createServer } from 'http';
 import { FootballDataClient } from './apiClient';
 import { config } from './config';
+import { startMorningSummaryCron } from './dailyCron';
 import { ResendEmailService } from './emailService';
 import { MatchScheduler } from './scheduler';
 import { NodeScheduleAdapter } from './schedulerAdapter';
@@ -69,6 +70,8 @@ async function main(): Promise<void> {
     matchDurationMinutes: config.matchDurationMinutes,
     oneHourBeforeMinutes: config.oneHourBeforeMinutes,
   });
+
+  startMorningSummaryCron({ apiClient, emailService });
 
   await startHealthServer(config.port);
   await monitor.initialize();

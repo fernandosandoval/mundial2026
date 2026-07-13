@@ -1,4 +1,5 @@
-import type { FootballDataApi, FootballMatch, MatchInfo } from '../src/types';
+import { filterMatchesForToday } from '../../src/dailyCron';
+import type { FootballDataApi, FootballMatch, MatchInfo } from '../../src/types';
 
 export const ARGENTINA_TEAM_ID = 7627;
 export const FRANCE_TEAM_ID = 758;
@@ -13,6 +14,11 @@ export function createSampleMatchInfo(overrides: Partial<MatchInfo> = {}): Match
     homeTeamId: ARGENTINA_TEAM_ID,
     awayTeamId: FRANCE_TEAM_ID,
     status: 'SCHEDULED',
+    stage: 'Semifinal',
+    venue: 'Estadio por confirmar',
+    refereeName: 'Por confirmar',
+    homeCrest: null,
+    awayCrest: null,
     ...overrides,
   };
 }
@@ -75,6 +81,10 @@ export class MockFootballDataApi implements FootballDataApi {
 
   async getUpcomingMatches(): Promise<MatchInfo[]> {
     return this.upcomingMatches;
+  }
+
+  async getTodaysMatches(now: Date = new Date()): Promise<MatchInfo[]> {
+    return filterMatchesForToday(this.upcomingMatches, now);
   }
 
   async getNextMatch(): Promise<MatchInfo | null> {

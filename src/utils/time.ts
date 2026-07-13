@@ -1,4 +1,5 @@
 import type { MatchInfo } from '../types';
+import { translateTeamName } from './translations';
 
 const MS_PER_MINUTE = 60_000;
 
@@ -26,8 +27,10 @@ export function formatCuantoFalta(
   matchStart: Date,
   now: Date = new Date(),
 ): string {
+  const home = translateTeamName(homeTeamName);
+  const away = translateTeamName(awayTeamName);
   const { hours, minutes } = calculateTimeRemaining(matchStart, now);
-  return `Faltan ${hours} horas y ${minutes} minutos para que comience el partido entre ${homeTeamName} y ${awayTeamName}`;
+  return `Faltan ${hours} horas y ${minutes} minutos para que comience el partido entre ${home} y ${away}`;
 }
 
 export function formatStartupEmailBody(
@@ -36,8 +39,10 @@ export function formatStartupEmailBody(
   matchStart: Date,
   now: Date = new Date(),
 ): string {
+  const home = translateTeamName(homeTeamName);
+  const away = translateTeamName(awayTeamName);
   const { hours, minutes } = calculateTimeRemaining(matchStart, now);
-  return `El monitor está activo. El próximo partido es ${homeTeamName} vs ${awayTeamName} y comienza en ${hours} horas y ${minutes} minutos.`;
+  return `El monitor está activo. El próximo partido es ${home} vs ${away} y comienza en ${hours} horas y ${minutes} minutos.`;
 }
 
 export function addMinutes(date: Date, minutes: number): Date {
@@ -69,7 +74,9 @@ export function isFutureDate(date: Date, now: Date = new Date()): boolean {
 }
 
 export function formatMatchSummary(match: MatchInfo): string {
-  return `${match.homeTeamName} vs ${match.awayTeamName} - ${match.startTime.toISOString()}`;
+  const home = translateTeamName(match.homeTeamName);
+  const away = translateTeamName(match.awayTeamName);
+  return `${home} vs ${away} - ${match.startTime.toISOString()}`;
 }
 
 export function emailSubjects(match: MatchInfo): {
@@ -77,7 +84,7 @@ export function emailSubjects(match: MatchInfo): {
   kickoff: string;
   matchEnded: string;
 } {
-  const pair = `${match.homeTeamName} vs ${match.awayTeamName}`;
+  const pair = `${translateTeamName(match.homeTeamName)} vs ${translateTeamName(match.awayTeamName)}`;
   return {
     oneHourBefore: `Falta 1 hora para: ${pair}`,
     kickoff: `Comenzó el partido: ${pair}`,

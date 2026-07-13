@@ -1,5 +1,5 @@
 import { Resend } from 'resend';
-import type { EmailService } from './types';
+import type { EmailService, SendEmailOptions } from './types';
 
 export interface ResendEmailServiceOptions {
   apiKey: string;
@@ -19,12 +19,13 @@ export class ResendEmailService implements EmailService {
     this.resend = options.resendClient ?? new Resend(options.apiKey);
   }
 
-  async send(subject: string, body: string): Promise<void> {
+  async send(subject: string, body: string, options?: SendEmailOptions): Promise<void> {
     const { error } = await this.resend.emails.send({
       from: this.fromEmail,
       to: this.toEmail,
       subject,
       text: body,
+      ...(options?.html ? { html: options.html } : {}),
     });
 
     if (error) {
@@ -34,9 +35,9 @@ export class ResendEmailService implements EmailService {
 }
 
 export class MockEmailService implements EmailService {
-  readonly sentEmails: Array<{ subject: string; body: string }> = [];
+  readonly sentEmails: Array<{ subject: string; body: string; html?: string }> = [];
 
-  async send(subject: string, body: string): Promise<void> {
-    this.sentEmails.push({ subject, body });
+  async send(subject: string, body: string, options?: SendEmailOptions): Promise<void> {
+    this.sentEmails.push({ subject, body, html: options?.html });
   }
 }

@@ -1,7 +1,10 @@
+import { translateStage, translateTeamName } from './utils/translations';
+import { ARGENTINA_TIMEZONE, isSameCalendarDay } from './utils/timezone';
 import type {
   FootballDataApi,
   FootballMatch,
   MatchInfo,
+  Referee,
   Team,
   TeamMatchesResponse,
 } from './types';
@@ -17,7 +20,25 @@ export interface FootballDataClientOptions {
 }
 
 export function getTeamDisplayName(team: Team): string {
-  return team.name ?? team.shortName ?? team.tla ?? 'Por definir';
+  const rawName = team.name ?? team.shortName ?? team.tla ?? 'Por definir';
+  return translateTeamName(rawName);
+}
+
+export function extractRefereeName(referees: Referee[] | undefined): string {
+  if (!referees || referees.length === 0) {
+    return 'Por confirmar';
+  }
+
+  const mainReferee =
+    referees.find((referee) => referee.type?.toUpperCase() === 'REFEREE') ?? referees[0];
+
+  const name = mainReferee.name?.trim();
+  return name && name.length > 0 ? name : 'Por confirmar';
+}
+
+export function extractVenue(venue: string | null | undefined): string {
+  const trimmed = venue?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : 'Estadio por confirmar';
 }
 
 export function filterUpcomingMatches(
@@ -29,6 +50,17 @@ export function filterUpcomingMatches(
   return matches
     .filter((match) => UPCOMING_STATUSES.has(match.status))
     .filter((match) => new Date(match.utcDate).getTime() > nowMs)
+    .sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
+}
+
+export function filterMatchesByCalendarDay(
+  matches: FootballMatch[],
+  day: Date,
+  timeZone: string = ARGENTINA_TIMEZONE,
+): FootballMatch[] {
+  return matches
+    .filter((match) => UPCOMING_STATUSES.has(match.status))
+    .filter((match) => isSameCalendarDay(new Date(match.utcDate), day, timeZone))
     .sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
 }
 
@@ -70,6 +102,11 @@ export class FootballDataClient implements FootballDataApi {
     return filterUpcomingMatches(matches).map((match) => this.toMatchInfo(match));
   }
 
+  async getTodaysMatches(now: Date = new Date()): Promise<MatchInfo[]> {
+    const matches = await this.fetchCompetitionMatches();
+    return filterMatchesByCalendarDay(matches, now).map((match) => this.toMatchInfo(match));
+  }
+
   async getNextMatch(): Promise<MatchInfo | null> {
     const upcoming = await this.getUpcomingMatches();
     return upcoming[0] ?? null;
@@ -101,6 +138,11 @@ export class FootballDataClient implements FootballDataApi {
       homeTeamId: match.homeTeam.id,
       awayTeamId: match.awayTeam.id,
       status: match.status,
+      stage: translateStage(match.stage),
+      venue: extractVenue(match.venue),
+      refereeName: extractRefereeName(match.referees),
+      homeCrest: match.homeTeam.crest ?? null,
+      awayCrest: match.awayTeam.crest ?? null,
     };
   }
 

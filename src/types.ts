@@ -17,6 +17,14 @@ export interface Team {
   name: string | null;
   shortName?: string | null;
   tla?: string | null;
+  crest?: string | null;
+}
+
+export interface Referee {
+  id?: number;
+  name: string | null;
+  type?: string | null;
+  nationality?: string | null;
 }
 
 export interface MatchScore {
@@ -37,6 +45,9 @@ export interface FootballMatch {
   id: number;
   utcDate: string;
   status: MatchStatus;
+  stage?: string | null;
+  venue?: string | null;
+  referees?: Referee[];
   homeTeam: Team;
   awayTeam: Team;
   competition?: Competition;
@@ -55,6 +66,11 @@ export interface MatchInfo {
   homeTeamId: number;
   awayTeamId: number;
   status: MatchStatus;
+  stage: string;
+  venue: string;
+  refereeName: string;
+  homeCrest: string | null;
+  awayCrest: string | null;
 }
 
 export interface NotificationTimes {
@@ -69,12 +85,17 @@ export interface SentEmail {
   to: string;
 }
 
+export interface SendEmailOptions {
+  html?: string;
+}
+
 export interface EmailService {
-  send(subject: string, body: string): Promise<void>;
+  send(subject: string, body: string, options?: SendEmailOptions): Promise<void>;
 }
 
 export interface FootballDataApi {
   getUpcomingMatches(): Promise<MatchInfo[]>;
+  getTodaysMatches(now?: Date): Promise<MatchInfo[]>;
   getNextMatch(): Promise<MatchInfo | null>;
   getMatchById(matchId: number): Promise<FootballMatch>;
 }

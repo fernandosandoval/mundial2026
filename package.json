@@ -18,13 +18,15 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "resend": "^4.0.0",
     "dotenv": "^16.4.7",
-    "node-schedule": "^2.1.1"
+    "node-cron": "^4.6.0",
+    "node-schedule": "^2.1.1",
+    "resend": "^4.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.0",
     "@types/node": "^22.13.10",
+    "@types/node-cron": "^3.0.11",
     "@types/node-schedule": "^2.1.7",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"

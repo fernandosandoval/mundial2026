@@ -5,6 +5,7 @@ import {
   formatMatchSummary,
   isFutureDate,
 } from './utils/time';
+import { translateTeamName } from './utils/translations';
 import type {
   EmailService,
   FootballDataApi,
@@ -122,14 +123,14 @@ export class MatchScheduler {
 
   async sendOneHourBeforeEmail(match: MatchInfo, subject?: string): Promise<void> {
     const emailSubject = subject ?? emailSubjects(match).oneHourBefore;
-    const body = `Falta 1 hora para el partido entre ${match.homeTeamName} y ${match.awayTeamName}.`;
+    const body = `Falta 1 hora para el partido entre ${translateTeamName(match.homeTeamName)} y ${translateTeamName(match.awayTeamName)}.`;
     await this.emailService.send(emailSubject, body);
     console.log(`[scheduler] Email enviado (1h): ${emailSubject}`);
   }
 
   async sendKickoffEmail(match: MatchInfo, subject?: string): Promise<void> {
     const emailSubject = subject ?? emailSubjects(match).kickoff;
-    const body = `Comenzó el partido entre ${match.homeTeamName} y ${match.awayTeamName}.`;
+    const body = `Comenzó el partido entre ${translateTeamName(match.homeTeamName)} y ${translateTeamName(match.awayTeamName)}.`;
     await this.emailService.send(emailSubject, body);
     console.log(`[scheduler] Email enviado (inicio): ${emailSubject}`);
   }
@@ -177,7 +178,7 @@ function getTeamNameFromFinished(
   fallback?: string,
 ): string {
   if (typeof apiName === 'string' && apiName.length > 0) {
-    return apiName;
+    return translateTeamName(apiName);
   }
-  return fallback ?? 'Por definir';
+  return translateTeamName(fallback ?? 'Por definir');
 }
