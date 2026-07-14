@@ -9,7 +9,7 @@ import {
   isSameCalendarDay,
 } from './utils/timezone';
 
-export const MORNING_SUMMARY_CRON = '0 8 * * *';
+export const MIDDAY_SUMMARY_CRON = '0 12 * * *';
 
 export function formatMorningSummarySubject(match: MatchInfo): string {
   const home = translateTeamName(match.homeTeamName);
@@ -135,12 +135,12 @@ export async function sendMorningMatchSummaries(
   return todaysMatches;
 }
 
-export function startMorningSummaryCron(options: DailyMorningSummaryOptions): ScheduledTask {
+export function startMiddaySummaryCron(options: DailyMorningSummaryOptions): ScheduledTask {
   const task = cron.schedule(
-    MORNING_SUMMARY_CRON,
+    MIDDAY_SUMMARY_CRON,
     () => {
       void sendMorningMatchSummaries(options).catch((error) => {
-        console.error('[daily-cron] Error al enviar el resumen matutino:', error);
+        console.error('[daily-cron] Error al enviar el resumen del mediodía:', error);
       });
     },
     {
@@ -149,7 +149,7 @@ export function startMorningSummaryCron(options: DailyMorningSummaryOptions): Sc
   );
 
   console.log(
-    `[daily-cron] Resumen matutino programado a las 08:00 (${ARGENTINA_TIMEZONE}).`,
+    `[daily-cron] Resumen del mediodía programado a las 12:00 (${ARGENTINA_TIMEZONE}).`,
   );
 
   return task;
