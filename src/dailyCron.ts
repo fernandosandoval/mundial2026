@@ -1,5 +1,6 @@
 import cron, { type ScheduledTask } from 'node-cron';
 import type { EmailService, FootballDataApi, MatchInfo } from './types';
+import { escapeHtml, renderCrestImg } from './utils/emailTemplates';
 import { translateTeamName } from './utils/translations';
 import {
   ARGENTINA_TIMEZONE,
@@ -9,23 +10,6 @@ import {
 } from './utils/timezone';
 
 export const MORNING_SUMMARY_CRON = '0 8 * * *';
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-function renderCrestImg(crestUrl: string | null, teamName: string): string {
-  if (!crestUrl) {
-    return '';
-  }
-
-  return `<img src="${escapeHtml(crestUrl)}" alt="Bandera de ${escapeHtml(teamName)}" width="50" height="50" style="display:block;margin:0 auto 8px;border:0;" />`;
-}
 
 export function formatMorningSummarySubject(match: MatchInfo): string {
   const home = translateTeamName(match.homeTeamName);

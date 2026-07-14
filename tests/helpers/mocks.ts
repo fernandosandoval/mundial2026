@@ -1,5 +1,7 @@
 import { filterMatchesForToday } from '../../src/dailyCron';
-import type { FootballDataApi, FootballMatch, MatchInfo } from '../../src/types';
+import { getTeamDisplayName, extractRefereeName, extractVenue } from '../../src/apiClient';
+import { translateStage, translateGroup } from '../../src/utils/translations';
+import type { FootballDataApi, FootballMatch, MatchInfo, MatchDuration } from '../../src/types';
 
 export const ARGENTINA_TEAM_ID = 7627;
 export const FRANCE_TEAM_ID = 758;
@@ -19,6 +21,18 @@ export function createSampleMatchInfo(overrides: Partial<MatchInfo> = {}): Match
     refereeName: 'Por confirmar',
     homeCrest: null,
     awayCrest: null,
+    matchday: null,
+    group: '',
+    halfTimeHome: null,
+    halfTimeAway: null,
+    duration: 'REGULAR',
+    goals: [],
+    bookings: [],
+    substitutions: [],
+    minute: null,
+    attendance: null,
+    fullTimeHome: null,
+    fullTimeAway: null,
     ...overrides,
   };
 }
@@ -97,5 +111,34 @@ export class MockFootballDataApi implements FootballDataApi {
       throw new Error(`Partido mock no encontrado: ${matchId}`);
     }
     return match;
+  }
+
+  toMatchInfo(match: FootballMatch): MatchInfo {
+    return {
+      id: match.id,
+      startTime: new Date(match.utcDate),
+      homeTeamName: getTeamDisplayName(match.homeTeam),
+      awayTeamName: getTeamDisplayName(match.awayTeam),
+      homeTeamId: match.homeTeam.id,
+      awayTeamId: match.awayTeam.id,
+      status: match.status,
+      stage: translateStage(match.stage),
+      venue: extractVenue(match.venue),
+      refereeName: extractRefereeName(match.referees),
+      homeCrest: match.homeTeam.crest ?? null,
+      awayCrest: match.awayTeam.crest ?? null,
+      matchday: match.matchday ?? null,
+      group: translateGroup(match.group),
+      halfTimeHome: match.score?.halfTime?.homeTeam ?? null,
+      halfTimeAway: match.score?.halfTime?.awayTeam ?? null,
+      duration: (match.score?.duration as MatchDuration) ?? 'REGULAR',
+      goals: match.goals ?? [],
+      bookings: match.bookings ?? [],
+      substitutions: match.substitutions ?? [],
+      minute: match.minute ?? null,
+      attendance: match.attendance ?? null,
+      fullTimeHome: match.score?.fullTime?.homeTeam ?? null,
+      fullTimeAway: match.score?.fullTime?.awayTeam ?? null,
+    };
   }
 }

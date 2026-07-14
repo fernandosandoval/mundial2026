@@ -1,9 +1,12 @@
-import { translateStage, translateTeamName } from './utils/translations';
+import { translateGroup, translateStage, translateTeamName } from './utils/translations';
 import { ARGENTINA_TIMEZONE, isSameCalendarDay } from './utils/timezone';
+import { ApiCache } from './apiCache';
+import { withRetry } from './retry';
 import type {
   FootballDataApi,
   FootballMatch,
   MatchInfo,
+  MatchDuration,
   Referee,
   Team,
   TeamMatchesResponse,
@@ -12,6 +15,9 @@ import type {
 const FOOTBALL_DATA_BASE_URL = 'https://api.football-data.org/v4';
 
 const UPCOMING_STATUSES = new Set(['SCHEDULED', 'TIMED']);
+
+const COMPETITION_CACHE_TTL_MS = 60_000;
+const MATCH_CACHE_TTL_MS = 30_000;
 
 export interface FootballDataClientOptions {
   apiKey: string;
@@ -90,6 +96,8 @@ export class FootballDataClient implements FootballDataApi {
   private readonly apiKey: string;
   private readonly worldCupCompetitionCode: string;
   private readonly fetchFn: typeof fetch;
+  private readonly competitionCache = new ApiCache<FootballMatch[]>();
+  private readonly matchCache = new ApiCache<FootballMatch>();
 
   constructor(options: FootballDataClientOptions) {
     this.apiKey = options.apiKey;
@@ -113,20 +121,36 @@ export class FootballDataClient implements FootballDataApi {
   }
 
   async getMatchById(matchId: number): Promise<FootballMatch> {
-    const url = `${FOOTBALL_DATA_BASE_URL}/matches/${matchId}`;
-    const response = await this.fetchFn(url, {
-      headers: {
-        'X-Auth-Token': this.apiKey,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Error al consultar partido ${matchId} (${response.status}): ${await response.text()}`,
-      );
+    const cacheKey = `match-${matchId}`;
+    const cached = this.matchCache.get(cacheKey);
+    if (cached) {
+      return cached;
     }
 
-    return (await response.json()) as FootballMatch;
+    const url = `${FOOTBALL_DATA_BASE_URL}/matches/${matchId}`;
+    const match = await withRetry(async () => {
+      const response = await this.fetchFn(url, {
+        headers: {
+          'X-Auth-Token': this.apiKey,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Error al consultar partido ${matchId} (${response.status}): ${await response.text()}`,
+        );
+      }
+
+      return (await response.json()) as FootballMatch;
+    });
+
+    this.matchCache.set(cacheKey, match, MATCH_CACHE_TTL_MS);
+    return match;
+  }
+
+  clearCache(): void {
+    this.competitionCache.clear();
+    this.matchCache.clear();
   }
 
   toMatchInfo(match: FootballMatch): MatchInfo {
@@ -143,25 +167,48 @@ export class FootballDataClient implements FootballDataApi {
       refereeName: extractRefereeName(match.referees),
       homeCrest: match.homeTeam.crest ?? null,
       awayCrest: match.awayTeam.crest ?? null,
+      matchday: match.matchday ?? null,
+      group: translateGroup(match.group),
+      halfTimeHome: match.score?.halfTime?.homeTeam ?? null,
+      halfTimeAway: match.score?.halfTime?.awayTeam ?? null,
+      duration: (match.score?.duration as MatchDuration) ?? 'REGULAR',
+      goals: match.goals ?? [],
+      bookings: match.bookings ?? [],
+      substitutions: match.substitutions ?? [],
+      minute: match.minute ?? null,
+      attendance: match.attendance ?? null,
+      fullTimeHome: match.score?.fullTime?.homeTeam ?? null,
+      fullTimeAway: match.score?.fullTime?.awayTeam ?? null,
     };
   }
 
   private async fetchCompetitionMatches(): Promise<FootballMatch[]> {
-    const url = `${FOOTBALL_DATA_BASE_URL}/competitions/${this.worldCupCompetitionCode}/matches`;
-
-    const response = await this.fetchFn(url, {
-      headers: {
-        'X-Auth-Token': this.apiKey,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Error al consultar Football-Data.org (${response.status}): ${await response.text()}`,
-      );
+    const cacheKey = `competition-${this.worldCupCompetitionCode}`;
+    const cached = this.competitionCache.get(cacheKey);
+    if (cached) {
+      return cached;
     }
 
-    const data = (await response.json()) as TeamMatchesResponse;
-    return data.matches ?? [];
+    const url = `${FOOTBALL_DATA_BASE_URL}/competitions/${this.worldCupCompetitionCode}/matches`;
+
+    const data = await withRetry(async () => {
+      const response = await this.fetchFn(url, {
+        headers: {
+          'X-Auth-Token': this.apiKey,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Error al consultar Football-Data.org (${response.status}): ${await response.text()}`,
+        );
+      }
+
+      return (await response.json()) as TeamMatchesResponse;
+    });
+
+    const matches = data.matches ?? [];
+    this.competitionCache.set(cacheKey, matches, COMPETITION_CACHE_TTL_MS);
+    return matches;
   }
 }

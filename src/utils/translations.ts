@@ -84,6 +84,25 @@ export const STAGE_TRANSLATIONS: Record<string, string> = {
   PRELIMINARY_ROUND: 'Ronda preliminar',
 };
 
+export const GROUP_TRANSLATIONS: Record<string, string> = {
+  GROUP_A: 'Grupo A',
+  GROUP_B: 'Grupo B',
+  GROUP_C: 'Grupo C',
+  GROUP_D: 'Grupo D',
+  GROUP_E: 'Grupo E',
+  GROUP_F: 'Grupo F',
+  GROUP_G: 'Grupo G',
+  GROUP_H: 'Grupo H',
+};
+
+export function translateGroup(group: string | null | undefined): string {
+  if (!group) {
+    return '';
+  }
+  const normalized = group.trim().toUpperCase();
+  return GROUP_TRANSLATIONS[normalized] ?? group;
+}
+
 export function translateStage(stage: string | null | undefined): string {
   if (!stage) {
     return 'Por confirmar';

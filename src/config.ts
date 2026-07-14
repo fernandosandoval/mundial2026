@@ -24,6 +24,8 @@ export const config = {
   port: Number(optionalEnv('PORT', '3000')),
   matchDurationMinutes: 115,
   oneHourBeforeMinutes: 60,
+  liveTrackingPollIntervalMs: Number(optionalEnv('LIVE_POLL_INTERVAL_MS', '60000')),
+  jobStorePath: optionalEnv('JOB_STORE_PATH', 'data/jobs.json'),
 };
 
 export function loadConfigForCli(): Pick<

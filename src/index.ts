@@ -3,6 +3,7 @@ import { FootballDataClient } from './apiClient';
 import { config } from './config';
 import { startMorningSummaryCron } from './dailyCron';
 import { ResendEmailService } from './emailService';
+import { JobStore } from './jobStore';
 import { MatchScheduler } from './scheduler';
 import { NodeScheduleAdapter } from './schedulerAdapter';
 import { formatStartupEmailBody } from './utils/time';
@@ -63,12 +64,16 @@ async function main(): Promise<void> {
 
   await sendStartupTestEmail(emailService, apiClient);
 
+  const jobStore = new JobStore(config.jobStorePath);
+
   const monitor = new MatchScheduler({
     apiClient,
     emailService,
     scheduler: new NodeScheduleAdapter(),
+    jobStore,
     matchDurationMinutes: config.matchDurationMinutes,
     oneHourBeforeMinutes: config.oneHourBeforeMinutes,
+    liveTrackingPollIntervalMs: config.liveTrackingPollIntervalMs,
   });
 
   startMorningSummaryCron({ apiClient, emailService });
