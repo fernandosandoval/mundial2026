@@ -149,11 +149,20 @@ export class LiveMatchTracker {
     const homeName = this.match.homeTeamName;
     const awayName = this.match.awayTeamName;
 
+    // Obtener el match actualizado de la API para tener goles y marcador completos
+    const freshMatch = await this.apiClient.getMatchById(this.match.id);
     const updatedMatch: MatchInfo = {
       ...this.match,
-      status: match.status as MatchInfo['status'],
-      halfTimeHome: this.match.halfTimeHome,
-      halfTimeAway: this.match.halfTimeAway,
+      status: freshMatch.status as MatchInfo['status'],
+      goals: freshMatch.goals ?? [],
+      bookings: freshMatch.bookings ?? [],
+      substitutions: freshMatch.substitutions ?? [],
+      halfTimeHome: freshMatch.score?.halfTime?.homeTeam ?? this.match.halfTimeHome,
+      halfTimeAway: freshMatch.score?.halfTime?.awayTeam ?? this.match.halfTimeAway,
+      fullTimeHome: freshMatch.score?.fullTime?.homeTeam ?? home,
+      fullTimeAway: freshMatch.score?.fullTime?.awayTeam ?? away,
+      duration: (freshMatch.score?.duration as MatchInfo['duration']) ?? this.match.duration,
+      attendance: freshMatch.attendance ?? this.match.attendance,
     };
 
     const fakeMatch = {
